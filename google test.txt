@@ -1,0 +1,391 @@
+Google test:
+-------------------------------------------------------------
+   - automated test
+   - regression test - ensures that new code does not broke old code
+   - unit test tests one class, one function
+   - if a test modifys global variables it should not be visible to other tests
+   - test should run fast
+   - do not rely on user input
+   - short lines of code
+   - unit testing - it tests a single class or function for expected results
+   - integration testing - testing of integration of modules, individual aplications, (integration of modules)
+   - system testing - end to end testing of the entire aplication workflow(also called black box testing - no acces to the code)
+   - unit test, integration test and system test  are part of the functional test because it tests that the code is working
+   - other types of test: stress and load tests, acceptance tests, etc
+
+To include google test in our code (CMAKE):
+--------------------------------------------------------
+include( FetchContent )
+
+set(GTEST_HOME "${CMAKE_CURRENT_BINARY_DIR}/gtest")
+
+FetchContent_Declare (
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG release-1.8.1
+  SOURCE_DIR "${GTEST_HOME}/src"
+  BINARY_DIR "${GTEST_HOME}/build"
+)
+
+FetchContent_GetProperties( googletest )
+
+if(NOT googletest_POPULATED)
+  FetchContent_Populate(googletest)
+  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+endif()
+
+FetchContent_MakeAvailable( googletest )
+
+enable_testing()
+
+inclusion of googletest in program:
+---------------------------------------------------------------
+   #include<gtest/gtest.h>
+   #include<gmock/gmock.h>
+   int main(int argc, char **argv){
+    testing::InitGoogleTest(&argc, argv);
+        return RUN_ALL_TESTS();
+   }
+
+unit test structure:
+---------------------------------------------------------------
+   - the structure of the test have 3 parts:
+           - arrange    <- insputs and preconditions, create the objects for the test, etc
+		   - act        <- call the method or function that you want tested
+		   - assert     <- check that the results are corect
+   - the code under test is separated from the setup step and verification test
+   - makes code problems more obvious
+   - a unit test tests one thing 
+     ex. in a file we have :
+	     int testpositives(std::vector<int> a){
+		       return std::countif(a.begin(),a.end(), isPositive);}
+			   
+	     the test in an other file is:
+		 TEST(TestCountPositives, BasicTest)    <- TEST gtest macro is called, TestCountPositives the name we give to the test suite,BasicTest the name we give to the test
+		 {
+		 // Arange                                     <-we setup the input that we feed to the tested function
+		    std::vector<int> InputVector{1,-2,3-4,-5};
+		 // Act                                  <- we call the tested function with the value we set at arrange phase
+		    int count=testpositives(InputVector);
+	     // Assert
+		    ASSERT_EQ(3,count);                  <- the first value is the expected value, the second one is the actual value.Test fails if the 2 are nnot the same
+		 }
+		// another test on the testpositives:
+        TEST(TestCountPositives, Emptyvectortest){     <- TestCountPositives the sametest suite name, as it is a collection of tests, Emptyvectortest names the test
+		 // Arange                                     <-we setup the input that we feed to the tested function
+		    std::vector<int> InputVector{-1,-2,-3};
+		 // Act                                  <- we call the tested function with the value we set at arrange phase
+		    int count=testpositives(InputVector);
+         // Assert
+		    ASSERT_EQ(0,count);			         <- we call the tested function with the value we set at arrange phase
+         }		
+    - assertions can have 2 outcomes:
+	    - Succes
+		- Failure - Fatal failure means the test fails and execution stops     - ASSERT
+		          - non Fatal failure means the test fails but it goes forward with the next one     - EXPECT
+	- with ASSERT execution stops as soon a test failed, with EXPECT goes on to the next test giving warning
+		- ASSERT_TRUE (condition) - fails if the condition is not true
+		- ASSERT_FALSE(condition) - fails if the condition is not false
+		- ASSERT_EQ()             -  fails if the condition is not equal
+		- ASSERT_NE()             -  fails if the condition is equal
+		- ASSERT_LT()             -  fails if the condition is lower then
+		- ASSERT_LE()             -  fails if the condition is lower or equal
+		- ASSERT_GT()             -  fails if the condition is greater then
+		- ASSERT_GE()             -  fails if the condition is greater or equal
+		- EXPECT_TRUE(condition)  - non fatal failure if if the condition is not true
+		- EXPECT_FALSE(condition) - non fatal failure if if the condition is true
+		- EXPECT_EQ()             -  non fatal failure  if the condition is not equal
+		- EXPECT_NE()             -  non fatal failure  if the condition is  equal
+		- EXPECT_LT()             -  non fatal failure  if the condition is lower  then
+		- EXPECT_LE()             -  non fatal failure  if the condition is lower or equal
+		- EXPECT_GT()             -  non fatal failure  if the condition is greater then
+		- EXPECT_GE()             -  non fatal failure  if the condition is greater or equal
+	- for C strings we have specialy designed asserts as ASSERT_EQ() compares the pointer adresses, not the content of it:(std::string is ok)
+	    - ASSERT_STREQ(x,y);      - fails if the 2 strings are not equal content
+		- EXPECT_STREQ(x,y);      - non fatal fail if the 2 strings are different
+	    - ASSERT_STRNE(x,y);      - fails if the 2 strings have equal content 
+		- EXPECT_STRNE(x,y);      - non fatal fail if the 2 strings have equal content
+		- ASSERT_STRCASEEQ(x,y);  - fails if the 2 strings are not equal content ignore case
+		- EXPECT_STRCASEEQ(x,y);  - non fatal fail if the 2 strings are not equal content ignore case
+		- ASSERT_STRCASENE(x,y);  - fails if the 2 strings have equal content ignore case
+		- EXPECT_STRCASENE(x,y);  - non fatal fail if the 2 strings have equal content ignore case
+
+Assertion on exception:
+----------------------------------------------------------------
+   - ASSERT_THROW(statement, exception)   - fails if statements throws a different type of exception then the exception type
+   - ASSERT_ANY_THROW(statement)          - fails if statement not gives and exception
+   - ASSERT_NO_THROW(statement)           - fails if statement gives an exception
+   - EXPECT_THROW(statement, exception)   - non fatal fail  if statements throws a different type of exception then the exception type
+   - EXPECT_ANY_THROW(statement)          - non fatal fail if statement not gives and exception
+   - EXPECT_NO_THROW(statement)           - non fatal fail if statement gives and exception
+	 ex. double mysqrt(double input){
+           if (input<0){
+               throw std::runtime_error("negative argument");}
+           else{ return sqrt(input)}}
+           
+         TEST(SquareRootTest, NegativeArgumentTest){
+              double inputvalue=-9;
+              ASSERT_ANY_THROW(mysqrt(inputvalue);}	
+         
+		 TEST(SquareRootTest, NegativeArgumentTest){
+              double inputvalue=-9;
+              ASSERT_THROW(mysqrt(inputvalue),std::runtime_error);}	
+         
+		 TEST(SquareRootTest, POsitiveArgumentTest){
+               double inputvalue=9;
+			 ASSERT_NO_THROW(mysqrt(inputvalue))}  
+		
+		int main(int argc, char **argv){
+		     testing::InitGoogleTest(&argc,argv);
+			 return RUN_ALL_TESTS();}
+
+test fixtures:
+-------------------------------------------------------------------------------------
+   - If you find yourself writing two or more tests that operate on similar data, you can use a test fixture. 
+     This allows you to reuse the same configuration of objects for several different tests.
+   - test fixtures help you reuse the testcode so dont have to write function for every test case
+   - test fixtures are tests with similar setup and teardown - is useful for removing code duplication.
+   - It's used where the setup phase and cleanup phase are similar.
+   - It's a class where the test setup is written in the SetUp() method and the cleanup is in TearDown().
+!!!- A fresh new fixture object is created for each test, immediately call SetUp(), run the test body, call TearDown(), and then delete the test fixture object.
+   - we must use the setup and teardown instead of constructor if the destructor can throw an exception
+   - How to make a fixture:
+       Derive a class from ::testing::Test . Start its body with protected:, as we'll want to access fixture members from sub-classes( needs to be a cpp file)
+	   Inside the class, declare any objects you plan to use
+	   If necessary, write a default constructor or SetUp() function to prepare the objects for each test. Use override in C++11 to make sure you spelled it correctly
+	   If necessary, write a destructor or TearDown() function to release any resources you allocated in SetUp() 
+   - Setup and Teardown is usualy used if we need to declare the classes we test with Classname *pointer=new Classtobetested;   and in teardown: delete pointer;
+   - fixture workflow: first the fixture is created, then the constructor is called, next SetUp is called then the test body is called
+	  after that teardown is called, then fixture destructor gets called
+   - SetUp and TearDonw is needed (constructor and destructor not enough) because constructor cannot be static, constructor cannot use ASSERT, when we need to call virtual functions, etc
+	 Teardown is used when the code can throw exceptions
+   - constructor and destructor needed when we will use sublcasses
+   - in the end of the file should be the main() and the run all test that tells gtest it neds to run the tests
+   - a test fixture can be called with:
+     Ex. TEST_F(Testfixtureclassname, testname){...testbody...}
+	 
+   - class Testclass :public testing::Test - SetUp()
+                   - TearDown()
+				   - SetUpTestCase()
+				   - TearDownTestCase()
+				   ^ your test fixture - this functions can be overriden
+	ex. class Account{
+	        public:
+			   Account();
+			   void deposit (double sum);
+			   void withdraw(double sum);
+			   double getbalance()const;
+			   void transfer(double sum);
+			private:
+               double mbalance;};			
+	   - test fixture:
+		    class AccountTestFixture:public testing::Test{
+			   {
+			      public:
+				     void SetUp() override{                      class is created, and variables initialized
+					    std::cout<<"Setup called";
+						account.deposit(10.5)}
+					 void TearDown() override{
+					   std::cout<<"teardown called";}
+					 static void SetUpTestCase(){
+					 std::cout<<"setuptestcase called";}
+					 static void TearDwonTest(){}
+				  protected:
+				     Account account;                              <-makes an account that will be initialized int the SetUp and destroyed in the teardown, so that not at every test the class is created, and variables initialized 
+					 };
+             Test_F(AccountTestFixture, TestDeposit){                       <- we need to use TEST_F  because it tells gtest it is a test fixture
+			    ASSERT_EQ(10.5,account.getBalance());
+			 Test_F(AccountTestFixture,TestWithdrawOK)
+			      { account.withdraw(3);
+				    ASSERT_EQ(7.5,account.getBalance());}
+
+Parametrized tests:
+-------------------------------------------------------------------------------------
+   - parametrized tests are usefull if the functions contain same code but different input values(==,!=) like test same function with 6 different values
+   - because of this it is good to avoid code duplication
+   - The parametrized test are called by overriding the testing::TestWithParam<T> template class
+   - the test body is defined by the function TEST_P
+   - if you want to use SetUpTestCase() and TearDownTestCase() you need to declare them public
+   - to generate the test INSTANTIATE_TEST_SUITE_P from parameters
+   - When you generate a test, the expected output values can be packed together with the input values using complex data structures.
+   - Generators can be used to generate input values for the test.
+   - the generators can include: - Range(begin, end[,step])
+                                 - Values(x1,x2,..x3)
+								 - ValuesIn(containers and iterators that are already defined)
+								 - Bool (generate True and False)
+								 - Combine (generate cartezian peoduct A={1,2,3} B={a,b,c} AxB{ (1,a),(1,b),(1,c),(2,a),(2,b),(2,c),...}
+   - ex. we wannt to test with 5 different values a function that returns if a number is between a defined range Validator::inRagne();
+        #include<gtest/gtest.h>
+        #include<gmock/gmock.h>   
+        class Validator{
+           public:
+		      Validator(int low, int high)
+			     :mlow{low},mhigh{high}{};
+			  bool inRange(int testvalue){
+			  return mlow<=valueToTest&&valueToTest<=mHigh;
+			  };
+		   private:
+		      int mlow,mhigh;
+		}
+		class ValidatorFixture: public testing::TestWithParam<int>{
+		public:
+		protected:
+		   Validator mValidator{5,10};
+		   };
+		TEST_P(ValidatorFixture, TestInRange){
+		   int param=GetParam();
+		   bool isInside=mValidator.inRange(param);
+		   ASSERT_TRUE(isInside);
+		   }
+		INSTANTIATE_TEST_CASE_P(InRangeTrue, ValidatorFixture, testing::Values(5,6,7,9,10));   <-INSTANTIATE_TEST_CASE_P(param1 is a unique prefix for the testcase, param2 name of fixtureclass,values)
+		     
+        int main(int argc,char **argv){
+                testing::InitGoogleTest(&argc,argv);
+                return RUN_ALL_TESTS();
+            }				
+    
+	- to test with a range of datas, the code would change:
+	  ex.#include<gtest/gtest.h>
+        #include<gmock/gmock.h>   
+        
+		class Validator{
+           public:
+		      Validator(int low, int high)
+			     :mlow{low},mhigh{high}{};
+			  bool inRange(int testvalue){
+			  return mlow<=valueToTest&&valueToTest<=mHigh;
+			  };
+		   private:
+		      int mlow,mhigh;
+		}
+		
+		class ValidatorFixture: public testing::TestWithParam<std::tuple<int, bool>>{
+		public:
+		protected:
+		   Validator mValidator{5,10};
+		   };
+		
+		TEST_P(ValidatorFixture, TestInRange){
+		   std::tuple<int,bool> tuple=GetParam();
+		   int param=std::get<0>(tuple);
+		   bool expectedValue=std::get<1>(tuple);
+		   bool isInside=mValidator inRange(param);
+		   ASSERT_EQ(expecctedValue,isInside);
+		   }
+		
+		INSTANTIATE_TEST_SUITE_P(InRangeTrue, ValidatorFixture, testing::Values(std::make_tuple<5,true>,std::make_tuple<6,true>,std::make_tuple<4,false>,std::make_tuple<-15,false>,));
+				     
+        int main(int argc,char **argv){
+                testing::InitGoogleTest(&argc,argv);
+                return RUN_ALL_TESTS();
+            }	
+
+google mock:
+------------------------------------------------------------------------------------ 
+   - google test and google mock should be the same installed version
+     class SomeClass{
+	    public:
+		   SomeClass()=default;
+		   virtual void someMethod(){
+		      std::cout<<"Say something";
+			  };
+			};
+	class SomeMockedClass: public SomeClass
+	{
+		MOCK_METHOD0(someMethod, void());            <- 0 means it has 0 arguments
+	};
+	Test(SampleTest, BasicTest){
+	    SomeMockedClass smc;
+		EXPEXCT_CALL(smc, someMethod).Times(1);
+		smc.someMethod();
+		smc.someMethod();}
+		
+	 int main(int argc, char **argv){
+	    testing::InitGoogleTest(&argc, argv);
+		return RUN_ALL_TESTS();
+		}
+		
+Introduction to mocking:
+---------------------------------------------------------------------
+
+   - Mock - a type of test double
+     - means replacing the real object with a fake one
+     - usefull for isolation and collaboration tests because it not needs its dependencys
+     - it helps because you can test if the functions in a class are called and with what parameters
+     - usually it is implemented by extending the class under test and overriding the methods with empty ones that does not modify anything
+       (example if we test a class that modifies a database we want to test if the code works, not if it modifyes the database, also if the 
+       the problem is with the database and the progy not works we can still test out class)
+	 - has set expectations: - throws does not throw exceptions
+	                         - calls methods 
+   - Stubs - are test doubles that respond with pre-defined data
+           - dont work outside of test
+		   - example you replace a minimal server with a one that responds with predefined data
+   - Fake - Do contain a working implementation of the class
+          - Takes a shortcut
+		  - not suitable for production
+		  - example in memory database
+
+Mocking methods:
+-----------------------------------------------------------------------
+   - first we need to extend the class
+   - instead of redefining the function we use the MOCK_METHOD macro:
+   - simple types:
+	 ex. MOCK_METHOD(Return type, methodname,( arguments,..))
+	     int sum (int a,int b);
+		 MOCK_METHOD(int, sum,(int,int));
+   - complex types:
+	 ex. std::map<int,int> foo(float x);
+	     MOCK_METHOD((std::map<int,int>),foo,(float));
+   - with specs:
+     ex. MOCK_METHOD(Return type, methodname,( arguments,..),(specs))
+	      specs: const, override, noexcept
+		void doSomething()const;
+		MOCK_METHOD(void,doSomething,(),(const));
+!!!	- There is a legacy method, that specifyies the number of parameteres:
+	- Mock Method with n parameters:
+	  MOCK_METHODn(name, returntype(param1type,param2type..))     <---- the continental way, n number of arguments
+	   ex. int sum(int a, int b);
+	       MOCK_METHOD2(sum,int(int,int));
+		   void doSomething();
+		   MOCK_METHOD0(doSomething, void());
+	- to mock a const method:
+	  Mock_CONST_METHODn
+	       int sum(int x, int y)const;
+		   MOCK_CONST_METHOD2(sum,int(int,int))
+
+Mocking methods:
+-------------------------------------------------------------------------------
+   - we need to subclass a class(extended or inherited?) whos function we want to mock (class MockDatabase: public Database{..}
+   - we make every functions of it with Mock in front   Sum()-> MockSum()
+   - the subclass will be fed to the function that needs it through polymorphism (mocked methods need virtual definition in base class), so the function will call the mocked class
+     usualy they are fed when Act is called 
+     ex. MOCK_METHOD(void, connect,());
+	     MOCK_METHOD(void, disconnect, ());
+		 MOCK_METHOD(float, getsallary, (int,float))
+		 MOCK_METHOD((std::map<std::string,int>), something, ());    <- if there is something  with <> we should put it in aprentice
+   TEST(TestEmployeeManager,TestConnection){
+       Mockdatabaseconnetion dbconnection("dummyconnection");
+	   EXPECT_CALL(dbConnection,connect());
+	   EXPECT_CALL(dbConnecction,disconect());
+	   }
+Mocking methods (Legacy version):
+---------------------------------------------------------------------------------
+   
+		 
+google test conclusions:
+   - global variables used in the testing purposes can alter their value in the testing process and can give unexpected results if not initialized before each test
+   - static variables from the testunit are not accesible from the testfile , if the program alters their value tests may file, method to make them unstatic at test phase necesarry
+   Ex. #ifdef testing
+       #define STATIC static
+	   #else
+	   #define STATIC
+	   #endif
+   
+   - functions if are in other files will be executed as long as they are included in the build of the tested files.if not then we will need to use mocks for them.
+     if functions are called without being mocked or included in the build then compile error
+   - if a tested function needs a function pointer then we can cast an int to one:
+    Ex. int (*myfuncpointer)(int,int){nullptr};
+        int a{20}; 
+		myfuncpointer=(int(*)(int,int))&a;
+        tested function:
+        result=testedfunction(x,y,myfuncpointer)		
